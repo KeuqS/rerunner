@@ -1,0 +1,20 @@
+language: "en"
+early_access: false
+reviews:
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/.xml"
+    - "!**/.jsonl"
+  path_instructions:
+    - path: "src/rerunner/**/*.py"
+      instructions: "Review Python code for strict typing (mypy compliance), exception handling, and httpx BaseTransport conventions."
+    - path: "tests/**/*.py"
+      instructions: "Ensure unit tests follow pytest best practices, are fully deterministic, and don't make external network calls."
+    - path: "docs/**/*.md"
+      instructions: "Verify developer documentation and architectural clarity."
+  auto_review:
+    enabled: true
+    drafts: false
