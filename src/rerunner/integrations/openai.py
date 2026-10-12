@@ -28,6 +28,6 @@ def wrap_openai(
     if hasattr(client, "_client") and hasattr(client._client, "_transport"):
         client._client._transport = transport
     else:
-        setattr(client, "_client", httpx.Client(transport=transport))
+        client._client = httpx.Client(transport=transport)
 
     return client

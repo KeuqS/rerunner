@@ -30,6 +30,6 @@ def wrap_anthropic(
         client._client._transport = transport
     else:
         # Fallback to replacing http_client
-        setattr(client, "_client", httpx.Client(transport=transport))
+        client._client = httpx.Client(transport=transport)
 
     return client

@@ -33,7 +33,7 @@ def verify_cassette_integrity(entries: list[CassetteEntry]) -> tuple[bool, str |
         return True, None
 
     expected_prev = "GENESIS"
-    for idx, entry in enumerate(entries, start=1):
+    for entry in entries:
         if entry.prev_hash != expected_prev:
             return (
                 False,
