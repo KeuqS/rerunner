@@ -1,0 +1,23 @@
+name: 💡 Feature Request / RFC
+description: Suggest a new capability or architectural enhancement for Rerunner
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a specific limitation or pain point?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the design, public API interface, or behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions, workarounds, or prior art (e.g., vcrpy, LangSmith).

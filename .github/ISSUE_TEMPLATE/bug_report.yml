@@ -1,0 +1,43 @@
+name: 🐛 Bug Report
+description: Report reproducible unexpected behavior or crashes in Rerunner
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please ensure you have tested against the latest version.
+  - type: input
+    id: version
+    attributes:
+      label: Rerunner Version
+      description: What version of rerunner are you using? (e.g., 0.1.0)
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, and LLM SDK (e.g., Python 3.11, Ubuntu 22.04, anthropic 0.28.0)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal Reproducible Example
+      description: Minimal code sample or cassette configuration reproducing the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true

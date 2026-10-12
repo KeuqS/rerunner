@@ -1,0 +1,104 @@
+"""Synchronous httpx.BaseTransport implementation for recording and replaying HTTP requests."""
+
+from __future__ import annotations
+
+import httpx
+from typing import Literal
+from pathlib import Path
+from rerunner.cassette import Cassette, CassetteError
+from rerunner.matcher import (
+    compute_request_key,
+    normalize_body,
+    normalize_headers,
+)
+from rerunner.models import CassetteEntry, RecordedRequest, RecordedResponse
+
+
+class CassetteTransport(httpx.BaseTransport):
+    """Custom httpx transport that records or replays network traffic via a cassette."""
+
+    def __init__(
+        self,
+        cassette_path: Path | str,
+        mode: Literal["record", "replay", "fork"] = "replay",
+        fork_step: int | None = None,
+        real_transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self.cassette_path = Path(cassette_path)
+        self.mode = mode
+        self.fork_step = fork_step
+        self.real_transport = real_transport or httpx.HTTPTransport()
+        self.current_step = 0
+
+        if self.mode in ("replay", "fork") and self.cassette_path.exists():
+            self.cassette = Cassette.load(self.cassette_path)
+        else:
+            self.cassette = Cassette(self.cassette_path)
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        self.current_step += 1
+        body_bytes = request.read()
+        request_key = compute_request_key(request.method, str(request.url), body_bytes)
+
+        # Decide whether to replay from cassette or hit live network
+        should_replay = (
+            self.mode == "replay"
+            or (self.mode == "fork" and self.fork_step is not None and self.current_step <= self.fork_step)
+        )
+
+        if should_replay:
+            match = self.cassette.find_http_match(request_key)
+            if match is None or match.response is None:
+                raise CassetteError(
+                    f"[Step {self.current_step}] No cassette match found in replay mode for "
+                    f"{request.method} {request.url} (key: {request_key[:12]}...)"
+                )
+
+            # Construct mock httpx.Response from recorded cassette
+            return httpx.Response(
+                status_code=match.response.status_code,
+                headers=match.response.headers,
+                content=match.response.body.encode("utf-8"),
+                request=request,
+            )
+
+        # LIVE EXECUTION (Record or Fork after fork_step)
+        real_response = self.real_transport.handle_request(request)
+        response_bytes = real_response.read()
+
+        # Record to cassette
+        recorded_req = RecordedRequest(
+            method=request.method,
+            url=str(request.url),
+            headers=normalize_headers(dict(request.headers)),
+            body=normalize_body(body_bytes),
+            request_key=request_key,
+        )
+
+        recorded_resp = RecordedResponse(
+            status_code=real_response.status_code,
+            headers=dict(real_response.headers),
+            body=response_bytes.decode("utf-8", errors="replace"),
+            http_version=real_response.extensions.get("http_version", b"HTTP/1.1").decode("ascii", errors="ignore"),
+        )
+
+        entry = CassetteEntry(
+            step=self.current_step,
+            entry_type="http",
+            request=recorded_req,
+            response=recorded_resp,
+        )
+        self.cassette.append(entry)
+        self.cassette.save()
+
+        # Re-wrap response so caller can read it cleanly
+        return httpx.Response(
+            status_code=real_response.status_code,
+            headers=real_response.headers,
+            content=response_bytes,
+            request=request,
+        )
+
+    def close(self) -> None:
+        if hasattr(self.real_transport, "close"):
+            self.real_transport.close()
