@@ -91,9 +91,13 @@ class Cassette:
     def find_http_match(self, request_key: str, step: int | None = None) -> CassetteEntry | None:
         """Find a recorded HTTP response matching the request key, optionally at a specific step."""
         for entry in self.entries:
-            if entry.entry_type == "http" and entry.request and entry.request.request_key == request_key:
-                if step is None or entry.step == step:
-                    return entry
+            if (
+                entry.entry_type == "http"
+                and entry.request
+                and entry.request.request_key == request_key
+                and (step is None or entry.step == step)
+            ):
+                return entry
         return None
 
     def __len__(self) -> int:

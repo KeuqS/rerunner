@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rerunner.cassette import Cassette, CassetteError
+from rerunner.cassette import Cassette
 from rerunner.integrity import verify_cassette_integrity
 
 app = typer.Typer(
