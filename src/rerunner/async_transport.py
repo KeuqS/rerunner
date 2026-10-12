@@ -12,6 +12,7 @@ from rerunner.matcher import (
     normalize_headers,
 )
 from rerunner.models import CassetteEntry, RecordedRequest, RecordedResponse
+from rerunner.sanitizer import sanitize_headers, sanitize_string
 
 
 class AsyncCassetteTransport(httpx.AsyncBaseTransport):
@@ -65,19 +66,24 @@ class AsyncCassetteTransport(httpx.AsyncBaseTransport):
         real_response = await self.real_transport.handle_async_request(request)
         response_bytes = await real_response.aread()
 
+        # Sanitize headers and body before writing to disk
+        cleaned_headers = sanitize_headers(normalize_headers(dict(request.headers)))
+        cleaned_req_body = sanitize_string(normalize_body(body_bytes))
+        cleaned_resp_body = sanitize_string(response_bytes.decode("utf-8", errors="replace"))
+
         # Record to cassette
         recorded_req = RecordedRequest(
             method=request.method,
             url=str(request.url),
-            headers=normalize_headers(dict(request.headers)),
-            body=normalize_body(body_bytes),
+            headers=cleaned_headers,
+            body=cleaned_req_body,
             request_key=request_key,
         )
 
         recorded_resp = RecordedResponse(
             status_code=real_response.status_code,
-            headers=dict(real_response.headers),
-            body=response_bytes.decode("utf-8", errors="replace"),
+            headers=sanitize_headers(dict(real_response.headers)),
+            body=cleaned_resp_body,
             http_version=real_response.extensions.get("http_version", b"HTTP/1.1").decode("ascii", errors="ignore"),
         )
 

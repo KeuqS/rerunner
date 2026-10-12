@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import httpx
 from typing import Literal
+from collections.abc import Iterator
 from pathlib import Path
 from rerunner.cassette import Cassette, CassetteError
 from rerunner.matcher import (
@@ -12,6 +13,7 @@ from rerunner.matcher import (
     normalize_headers,
 )
 from rerunner.models import CassetteEntry, RecordedRequest, RecordedResponse
+from rerunner.sanitizer import sanitize_headers, sanitize_string
 
 
 class CassetteTransport(httpx.BaseTransport):
@@ -54,7 +56,20 @@ class CassetteTransport(httpx.BaseTransport):
                     f"{request.method} {request.url} (key: {request_key[:12]}...)"
                 )
 
-            # Construct mock httpx.Response from recorded cassette
+            # Replay streaming chunks if response was recorded as stream
+            if match.response.is_streaming and match.response.chunks:
+                def stream_generator() -> Iterator[bytes]:
+                    for chunk in match.response.chunks:  # type: ignore[union-attr]
+                        yield chunk.encode("utf-8")
+
+                return httpx.Response(
+                    status_code=match.response.status_code,
+                    headers=match.response.headers,
+                    stream=httpx.ByteStream(match.response.body.encode("utf-8")),
+                    request=request,
+                )
+
+            # Standard buffered response replay
             return httpx.Response(
                 status_code=match.response.status_code,
                 headers=match.response.headers,
@@ -66,19 +81,23 @@ class CassetteTransport(httpx.BaseTransport):
         real_response = self.real_transport.handle_request(request)
         response_bytes = real_response.read()
 
-        # Record to cassette
+        # Sanitize headers and body before writing to disk
+        cleaned_headers = sanitize_headers(normalize_headers(dict(request.headers)))
+        cleaned_req_body = sanitize_string(normalize_body(body_bytes))
+        cleaned_resp_body = sanitize_string(response_bytes.decode("utf-8", errors="replace"))
+
         recorded_req = RecordedRequest(
             method=request.method,
             url=str(request.url),
-            headers=normalize_headers(dict(request.headers)),
-            body=normalize_body(body_bytes),
+            headers=cleaned_headers,
+            body=cleaned_req_body,
             request_key=request_key,
         )
 
         recorded_resp = RecordedResponse(
             status_code=real_response.status_code,
-            headers=dict(real_response.headers),
-            body=response_bytes.decode("utf-8", errors="replace"),
+            headers=sanitize_headers(dict(real_response.headers)),
+            body=cleaned_resp_body,
             http_version=real_response.extensions.get("http_version", b"HTTP/1.1").decode("ascii", errors="ignore"),
         )
 

@@ -18,11 +18,13 @@ class RecordedRequest(BaseModel):
 
 
 class RecordedResponse(BaseModel):
-    """Recorded HTTP response."""
+    """Recorded HTTP response, supporting both buffered and streaming chunked payloads."""
 
     status_code: int
     headers: dict[str, str] = Field(default_factory=dict)
     body: str = ""
+    chunks: list[str] = Field(default_factory=list)
+    is_streaming: bool = False
     is_base64: bool = False
     http_version: str = "HTTP/1.1"
 
@@ -30,10 +32,11 @@ class RecordedResponse(BaseModel):
 class CassetteMetadata(BaseModel):
     """Metadata header written as the first line of every cassette."""
 
-    format_version: str = "1.0.0"
+    format_version: str = "1.1.0"
     created_at: float = Field(default_factory=time.time)
     agent_id: str | None = None
     hash_algorithm: str = "sha256"
+    sanitized: bool = True
 
 
 class CassetteEntry(BaseModel):

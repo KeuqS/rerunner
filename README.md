@@ -141,21 +141,60 @@ def test_agent_decision(rerunner_transport):
     assert "low risk" in completion.choices[0].message.content.lower()
 ```
 
-Run test suite in replay mode:
-```bash
+# Run test suite in replay mode (0 network calls, $0 cost)
 pytest
-```
 
-Re-record all cassettes when prompts change intentionally:
-```bash
+# Re-record all cassettes when prompts change intentionally
 pytest --rerunner-record
 ```
+
+---
+
+## ⚡ 1-Line Client Wrappers
+
+Wrap your existing SDK instances with zero configuration:
+
+```python
+import anthropic
+import openai
+from rerunner.integrations import wrap_anthropic, wrap_openai
+
+# Wrap Anthropic client
+client_claude = wrap_anthropic(anthropic.Anthropic(), "agent_run.jsonl", mode="replay")
+
+# Wrap OpenAI client
+client_openai = wrap_openai(openai.OpenAI(), "agent_run.jsonl", mode="replay")
+```
+
+### LangChain & LangGraph Integration
+```python
+from rerunner.integrations import RerunnerCallbackHandler
+
+handler = RerunnerCallbackHandler("langgraph_agent.jsonl", mode="replay")
+agent_executor.invoke({"input": "Fetch stock price"}, config={"callbacks": [handler]})
+```
+
+---
+
+## 🔒 Enterprise Secret & PII Sanitization
+
+Never accidentally commit API keys or auth tokens to GitHub. Rerunner automatically scrubs:
+* Anthropic API keys (`sk-ant-...`) $\rightarrow$ `[REDACTED_ANTHROPIC_KEY]`
+* OpenAI API keys (`sk-proj-...`, `sk-...`) $\rightarrow$ `[REDACTED_OPENAI_KEY]`
+* Authorization headers (`Bearer ...`) $\rightarrow$ `Bearer [REDACTED_TOKEN]`
+* AWS access keys (`AKIA...`) $\rightarrow$ `[REDACTED_AWS_KEY_ID]`
 
 ---
 
 ## 💻 CLI Commands
 
 ```bash
+# Calculate CI cost reductions and token savings
+rerunner stats session.jsonl
+
+# Visually play back agent execution steps in terminal
+rerunner play session.jsonl
+
 # Inspect cassette details and step sequences
 rerunner inspect session.jsonl
 

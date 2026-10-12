@@ -115,5 +115,83 @@ def diff(
     console.print(table)
 
 
+@app.command()
+def stats(
+    cassette_path: Path = typer.Argument(..., help="Path to the .jsonl cassette file"),
+) -> None:
+    """Calculate token savings, latency savings, and cost reductions achieved by replaying."""
+    try:
+        cassette = Cassette.load(cassette_path, verify_integrity=False)
+    except Exception as exc:
+        console.print(f"[bold red]Error loading cassette:[/] {exc}")
+        sys.exit(1)
+
+    total_chars = 0
+    http_steps = 0
+    side_effect_steps = 0
+
+    for entry in cassette.entries:
+        if entry.entry_type == "http" and entry.request and entry.response:
+            http_steps += 1
+            total_chars += len(entry.request.body) + len(entry.response.body)
+        elif entry.entry_type == "side_effect":
+            side_effect_steps += 1
+
+    est_tokens = max(1, total_chars // 4)
+    # Estimate based on blend of Claude 3.5 Sonnet / GPT-4o pricing (~$10/M tokens)
+    est_dollars_saved = (est_tokens / 1_000_000) * 10.0
+    # Average live LLM network call takes ~1.8 seconds vs 0.001s replay
+    time_saved_seconds = http_steps * 1.8
+
+    stats_table = Table(title="CI Replay Efficiency & Savings", show_header=True, header_style="bold green")
+    stats_table.add_column("Metric", style="cyan")
+    stats_table.add_column("Value", style="bold yellow")
+
+    stats_table.add_row("Total Recorded Steps", str(len(cassette.entries)))
+    stats_table.add_row("HTTP LLM Calls Avoided", str(http_steps))
+    stats_table.add_row("Side-Effects Safely Stubbed", str(side_effect_steps))
+    stats_table.add_row("Estimated Tokens Saved", f"{est_tokens:,}")
+    stats_table.add_row("Estimated API Cost Saved (per test run)", f"${est_dollars_saved:.4f}")
+    stats_table.add_row("CI Pipeline Time Saved (per test run)", f"{time_saved_seconds:.1f}s")
+
+    console.print(stats_table)
+
+
+@app.command()
+def play(
+    cassette_path: Path = typer.Argument(..., help="Path to the .jsonl cassette file"),
+) -> None:
+    """Visually step through recorded agent steps in the terminal."""
+    try:
+        cassette = Cassette.load(cassette_path, verify_integrity=False)
+    except Exception as exc:
+        console.print(f"[bold red]Error loading cassette:[/] {exc}")
+        sys.exit(1)
+
+    console.print(Panel(f"[bold green]Replaying {len(cassette.entries)} recorded agent steps...[/]", title="📼 Flight Playback"))
+
+    for entry in cassette.entries:
+        if entry.entry_type == "http" and entry.request and entry.response:
+            console.print(
+                Panel(
+                    f"[bold yellow]Method:[/] {entry.request.method} {entry.request.url}\n"
+                    f"[bold yellow]Response Code:[/] [green]{entry.response.status_code}[/]\n"
+                    f"[dim]Body Preview:[/] {entry.response.body[:180]}...",
+                    title=f"Step {entry.step}: LLM Network Interaction",
+                    border_style="blue",
+                )
+            )
+        elif entry.entry_type == "side_effect":
+            console.print(
+                Panel(
+                    f"[bold cyan]Function:[/] {entry.side_effect_name}\n"
+                    f"[bold cyan]Result:[/] {entry.side_effect_result}",
+                    title=f"Step {entry.step}: Guarded Side-Effect",
+                    border_style="magenta",
+                )
+            )
+
+
 if __name__ == "__main__":
     app()
+
