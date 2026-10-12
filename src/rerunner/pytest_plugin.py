@@ -32,8 +32,10 @@ def rerunner_transport(
     if marker and marker.args:
         cassette_path = str(marker.args[0])
 
-    is_record_mode = request.config.getoption("--rerunner-record")
-    mode = "record" if is_record_mode else "replay"
+    from typing import Literal
+
+    is_record_mode = bool(request.config.getoption("--rerunner-record"))
+    mode: Literal["record", "replay"] = "record" if is_record_mode else "replay"
 
     transport = CassetteTransport(cassette_path=cassette_path, mode=mode)
     yield transport
