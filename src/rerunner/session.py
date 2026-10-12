@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from rerunner.side_effects import set_active_cassette
 from rerunner.transport import CassetteTransport
 

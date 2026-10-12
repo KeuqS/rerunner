@@ -13,7 +13,7 @@ runner = CliRunner()
 def test_cli_inspect_and_verify(temp_cassette_path: Path) -> None:
     # 1. Create a dummy recorded cassette
     with record(temp_cassette_path) as session:
-        client = session.get_client()
+        _ = session.get_client()
         # Dummy call or empty cassette
         pass
 
