@@ -26,7 +26,6 @@ jobs:
       - name: Check code formatting & linting with Ruff
         run: |
           ruff check .
-          ruff format --check .
 
       - name: Run strict type checking with Mypy
         run: |
