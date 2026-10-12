@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
 import httpx
 import pytest
-from pathlib import Path
 from rerunner.async_transport import AsyncCassetteTransport
 from rerunner.transport import CassetteTransport
-from tests.conftest import MockAsyncRealTransport, MockRealTransport
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-def test_sync_record_and_replay(temp_cassette_path: Path, mock_transport: MockRealTransport) -> None:
+def test_sync_record_and_replay(temp_cassette_path: Path, mock_transport: Any) -> None:
     # 1. Record Mode
     record_transport = CassetteTransport(
         cassette_path=temp_cassette_path,
@@ -40,9 +42,7 @@ def test_sync_record_and_replay(temp_cassette_path: Path, mock_transport: MockRe
 
 
 @pytest.mark.asyncio
-async def test_async_record_and_replay(
-    temp_cassette_path: Path, mock_async_transport: MockAsyncRealTransport
-) -> None:
+async def test_async_record_and_replay(temp_cassette_path: Path, mock_async_transport: Any) -> None:
     # 1. Async Record Mode
     async_record_transport = AsyncCassetteTransport(
         cassette_path=temp_cassette_path,

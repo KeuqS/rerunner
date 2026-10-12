@@ -18,10 +18,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install tools
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy hatchling pydantic httpx typer rich pytest
+          pip install -e ".[dev]"
 
       - name: Check code formatting & linting with Ruff
         run: |
@@ -30,4 +30,4 @@ jobs:
 
       - name: Run strict type checking with Mypy
         run: |
-          mypy src tests
+          mypy src

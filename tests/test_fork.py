@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
 import httpx
-from pathlib import Path
 from rerunner.transport import CassetteTransport
-from tests.conftest import MockRealTransport
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-def test_fork_replays_past_and_executes_new_live(temp_cassette_path: Path) -> None:
-    mock = MockRealTransport()
+def test_fork_replays_past_and_executes_new_live(temp_cassette_path: Path, mock_transport: Any) -> None:
+    mock = mock_transport
 
     # Step 1 & 2 recorded initially
     transport_rec = CassetteTransport(cassette_path=temp_cassette_path, mode="record", real_transport=mock)
